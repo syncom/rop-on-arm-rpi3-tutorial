@@ -118,7 +118,7 @@ that the code is 4-byte aligned) for the shell code.
 This is the shell code we are going to jump to after overrunning the stack
 buffer later.
 
-## The bad code
+### The bad code
 The bad C code, [badcode.c](src/badcode.c), exhibits a classic buffer overflow
 on the stack. To compile the code without stack protection and DEP, two
 OS-added anti-exploitation countermeasures, for the demonstration purpose, do
@@ -256,25 +256,6 @@ dumped) message when injecting the payload.
 
 In Part 2, we will describe the technique to bypass non-executable
 stack.
-
-### How to demonstrate the attack over the network
-
-* On victim machine, change to the `src` directory. On one terminal
-  ```
-  $ mkfifo pip
-  $ nc -l 3333 > pip # listening on port 3333: DANGER
-  ```
-  On another terminal
-  ```
-  $ cat pip | setarch `arch` -R ./badcode
-  ```
-
-* On attacking machine, change to the `src` directory. On a terminal
-  ```
-  $ (cat payload; cat) | nc 127.0.0.1 3333
-  ```
-  In the above command, `127.0.0.1` can be replaced with the external IP
-  of the victim machine.
 
 ## Part 2: Return-oriented programming exploit on ARMv7
 
@@ -463,6 +444,25 @@ segmentation fault. This is likely caused by the arbitrary bytes we used
 for the padding or our setting the saved $r11 as 0x00000000. I have not
 dug into the root cause, but it should not affect the effectiveness
 of our exploit.
+
+## How to demonstrate the attack over the network
+
+* On victim machine, change to the `src` directory. On one terminal
+  ```
+  $ mkfifo pip
+  $ nc -l 3333 > pip # listening on port 3333: DANGER
+  ```
+  On another terminal
+  ```
+  $ cat pip | setarch `arch` -R ./badcode
+  ```
+
+* On attacking machine, change to the `src` directory. On a terminal
+  ```
+  $ (cat payload; cat) | nc 127.0.0.1 3333
+  ```
+  In the above command, `127.0.0.1` can be replaced with the external IP
+  of the victim machine.
 
 ## A list of unsafe C functions to avoid when playing with strings
 ```
