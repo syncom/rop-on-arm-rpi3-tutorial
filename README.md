@@ -9,7 +9,7 @@ Pi 3](https://www.raspberrypi.org/products/raspberry-pi-3-model-b/)
 running the Raspbian Linux operating system. 
 
 ## Operating system for the tutorial
-[Raspian](https://www.raspberrypi.org/downloads/raspbian/) (kernel
+[Raspbian](https://www.raspberrypi.org/downloads/raspbian/) (kernel
 version 4.14). Running `uname -a` gives `Linux rpi 4.14.37-v7+ \#1111
 SMP Thu Apr 26 13:56:59 BST 2018 armv7l GNU/Linux`
 
@@ -35,7 +35,7 @@ the command that is supposed to mark the binary's stack non-executable,
 use for this demonstration. And therefore, this step is redundant on
 this particular platform.
 
-### Adress space layout randomization (ASLR): disable for Part 1 and Part 2
+### Address space layout randomization (ASLR): disable for Part 1 and Part 2
 One can either disable ASLR on the vulnerable binary only during
 execution time
 ```
@@ -251,7 +251,7 @@ this tutorial, non-executable stack is not properly implemented, and
 thus cannot be easily enabled using the `execstack -c [binary]` command.
 On a target that supports this countermeasure, its effect can be
 observed by `make badcode_dep`, and then repeating the procedures above
-on `./badcode_dep`. You should receive a segementation fault (core
+on `./badcode_dep`. You should receive a segmentation fault (core
 dumped) message when injecting the payload.
 
 In Part 2, we will describe the technique to bypass non-executable
@@ -461,7 +461,7 @@ exit
 Note that when we exit from the shell, it might get an (unharmful)
 segmentation fault. This is likely caused by the arbitrary bytes we used
 for the padding or our setting the saved $r11 as 0x00000000. I have not
-digged into the root cause, but it should not affect the effectiveness
+dug into the root cause, but it should not affect the effectiveness
 of our exploit.
 
 ## A list of unsafe C functions to avoid when playing with strings
