@@ -1,4 +1,4 @@
-# Tutorial: Exploiting Buffer Overflow on ARM (A32) with Raspberry Pi 3
+# Tutorial: ARM (A32) Linux Buffer Overflow Exploit with Raspberry Pi 3
 
 Ben Lynn has written an excellent tutorial about how to exploit a
 stack-based buffer overflow vulnerability on 64-bit Linux in his
@@ -449,7 +449,7 @@ Fri  4 May 04:53:42 CST 2018
 exit
 ```
 
-Note that when we exit from the shell, it might get an (unharmful)
+Note that when we exit from the shell, it might get a (harmless)
 segmentation fault. This is likely caused by the arbitrary bytes we used
 for the padding or our setting the saved $r11 as 0x00000000. I have not
 dug into the root cause, but it should not affect the effectiveness
