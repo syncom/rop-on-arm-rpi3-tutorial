@@ -1,5 +1,7 @@
 # Tutorial: ARM (A32) Linux Buffer Overflow Exploit with Raspberry Pi 3
 
+*Before automating a process, one needs to know how to do it manually.*
+
 Ben Lynn has written an excellent tutorial about how to exploit a
 stack-based buffer overflow vulnerability on 64-bit Linux in his
 blog post [Return-oriented programming on 64-bit
