@@ -88,7 +88,6 @@ $ objdump -d shell | sed -n '/needle0/,/needle1/p'
 ```
 This prints
 ```assembly
-,/needle1/p'
 000103f0 <needle0>:
    103f0:	ea000004 	b	10408 <lab1>
 
@@ -111,7 +110,7 @@ This prints
 Because '0x415-0x3f0' equals 37 in decimal, we round it to 40 bytes (so
 that the code is 4-byte aligned) for the shell code.
 ```
-$ xxd -s0x415 -l40 -p shell > shellcode.txt
+$ xxd -s0x3f0 -l40 -p shell > shellcode.txt
 $ cat shellcode.txt
 040000ea0e00a0e1011021e0022022e00b70a0e3000000eff9ffffeb2f62
 696e2f6261736800dead
